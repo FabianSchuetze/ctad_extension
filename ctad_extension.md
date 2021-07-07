@@ -41,7 +41,7 @@ A::member
 
 <td>
 <pre class="language-cpp">
-template <typename T = int>
+template &lt;typename T = int&gt;
 struct A{
     using container = std::vector<T>;
     static void func() {};
