@@ -1,17 +1,22 @@
-# CTAD for qualified-ids help avoid breaking usercode when classes are templetized
-==================================================================================
+<center> 
+<h1> Propagting CTAD to qualified-ids when CTAD can deduce the type of the nested name-specifier from its default constructor</h1>
 
-> We would like to suggest that CTAD propagates through to qualified-ids when-ever the template argument of the nested name specifier can be derived from its default constructor. This broadens CTAD's utility when converting existing classes into template classes and further avoids breaking existing user code.   
 
-CTAD for qualified-ids help avoid breaking usercode when classes are templetized
+Kunal  Tyagi <br>
+Fabian Schuetze
+</center>
 
-<table>
+<blockquote>We like to suggest type deduction of qualified ids if CTAD can derive the type of the nested name specifier from its default constructor. In such situations, CTAD already deduces the nested-name-specifier's type. Extending this facility to qualified ids broads the utility of CTAD. </blockquote>
+
+<h4> Code Example </h4>
+
+<table border=1>
 <tr>
 <th>
-Current Situation
+Works very well
 </th>
 <th>
-Extended Library
+If the nested-name-specfier is a template, <br> types of qualified-ids aren't deducded, <br> although CTAD deduces the type of the specifier
 </th>
 </tr>
 
@@ -19,7 +24,7 @@ Extended Library
 
 <td>
 <pre class="language-cpp">
-```cpp
+
 struct A{
     using container = std::vector<int>;
     static void func() {};
@@ -31,13 +36,11 @@ A::container container_of_a{};
 A::func();
 A::Color color{};
 A::member 
-```
 </pre>
 </td>
 
 <td>
 <pre class="language-cpp">
-```cpp
 template <typename T = int>
 struct A{
     using container = std::vector<T>;
@@ -45,13 +48,11 @@ struct A{
     enum class Color {blue, red };
     const static T member{20}; 
 };
-A a{}; !\textcolor{teal}{// Works fine, thanks to CTAD}!
-A::container container_of_a{}; !\textcolor{red}{// breaks.}!
-A::func(); !\textcolor{red}{// breaks.}!
-A::Color color{}; !\textcolor{red}{// breaks.}!
-A::member  !\textcolor{red}{// breaks.}!
-```
-
+A a{}; <span style="color:blue">Works fine, thanks to CTAD</span>. 
+A::container container_of_a{}; <span style="color:red">Breaks</span>. 
+A::func();  <span style="color:red">Breaks</span>. 
+A::Color color{};<span style="color:red">Breaks</span>. 
+A::member <span style="color:red">Breaks</span>. 
 </pre>
 </td>
 
@@ -59,25 +60,14 @@ A::member  !\textcolor{red}{// breaks.}!
 </table>
 
 
-#Motivation
-CTAD permits library authors to turn an existing class into class templates with default arguments without breaking existing user code. Unfortunately, CTAD does not infer the types of qualified-ids (nested typedefs, nested enums or classes, const static member variables, or static functions). Extended the reach of template argument deduction to qualified ids broadens the scope of template argument deduction. 
+<h4>Motivation</h4>
+One of the implications of CTAD is that library authors can turn an existing class into a class template with default arguments without breaking existing user code. Unfortunately, CTAD does not enable inference of qualified-ids (nested typedefs, nested enums or classes, const static member variables, or static functions), as documented above. Such failure is surprising if the nested-name-specifier's type is inferred correctly and if the context allows deducing the qualified-id's type.
 
-
-
-
-
-Relevant godbolt link: \url{https://godbolt.org/z/sM8eGP9ja}
-
-#Possible Implementation
-We would like to suggest that CTAD propagates through to qualified-ids whenever the template argument of the nested name specifier can be derived from its default constructor. More precisely, one could implement CTAD for nested memebers' as:
-```cpp
+<h4>Possible Implementation</h4>
+Suppose the type of the nested-name-specifier ```c++ A<T>::``` can be derived automatically from the default constructor of ```A``` with CTAD. Then, one could attempt to deduce the qualified-id's type  ```A<T>::qualified_type``` with ```decltype(A{})::qualified_id```. In terms of the example specified above:  
+<pre class="language-cpp">
 decltype(A{})::container container_of_a{};
 decltype({A{})::func();
 decltype({A{})::Color color{};
 decltype({A{})::member;
-```
-
-#Comparison with Current Standard
-Needs modification of
-- Nested name specifier \url{https://timsong-cpp.github.io/cppwp/n4861/expr.prim.id.qual#nt:nested-name-specifier}
-- Template name \url{https://timsong-cpp.github.io/cppwp/n4861/temp.names#nt:template-name}
+</pre>
